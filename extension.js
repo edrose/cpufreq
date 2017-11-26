@@ -8,7 +8,6 @@ const Clutter = imports.gi.Clutter;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const Util = imports.misc.util;
-const Mainloop = imports.mainloop;
 
 const SAVE_SETTINGS_KEY = 'save-settings';
 const TURBO_BOOST_KEY = 'turbo-boost';
@@ -36,7 +35,7 @@ let core_event = 0;
 let freq_event = 0;
 let info_event = 0;
 let monitor_event = 0;
-let monitorID = 0, saveID;
+let monitorID = 0, saveID, powerID;
 let save = false;
 let cpucount = 1;
 let freqInfo = null;
@@ -154,6 +153,8 @@ const FrequencyIndicator = new Lang.Class({
             save = this._settings.get_boolean (SAVE_SETTINGS_KEY);
             this.save_switch.setToggleState (save);
         }));
+        this.power = Main.panel.statusArea["aggregateMenu"]._power._proxy;
+        powerID = this.power.connect ('g-properties-changed', Lang.bind (this, this.on_power_state));
     },
 
     _on_menu_state_changed: function (source, state) {
@@ -167,6 +168,10 @@ const FrequencyIndicator = new Lang.Class({
             info_event = 0;
             Clutter.ungrab_keyboard ();
         }
+    },
+
+    on_power_state: function () {
+        //TODO changing profiles
     },
 
     _is_events: function () {
@@ -559,6 +564,10 @@ const FrequencyIndicator = new Lang.Class({
                 }
             }));
             for (let p in profiles) {
+                if (!profiles[p].guid) {
+                    profiles[p].guid = Gio.dbus_generate_guid ();
+                    this._settings.set_string (PROFILES_KEY, JSON.stringify (profiles));
+                }
                 this._add_profile (p);
             }
             if (!this.installed || !this.updated) {
@@ -669,7 +678,7 @@ const FrequencyIndicator = new Lang.Class({
             let core = {g:this._get_governor (key), a:this._get_coremin (key), b:this._get_coremax (key)};
             cores.push (core);
         }
-        let p = {name:pname, minf:minf, maxf:maxf, turbo:boost, cpu:GLib.get_num_processors (), acpi:!this.pstate_present, core:cores};
+        let p = {name:pname, minf:minf, maxf:maxf, turbo:boost, cpu:GLib.get_num_processors (), acpi:!this.pstate_present, guid:Gio.dbus_generate_guid (), core:cores};
         save = save_state;
         print (JSON.stringify (p));
         return p;
@@ -1245,6 +1254,7 @@ const FrequencyIndicator = new Lang.Class({
         if (event != 0) this._settings.disconnect (event);
         if (monitorID) this._settings.disconnect (monitorID);
         if (saveID) this._settings.disconnect (saveID);
+        if (powerID) this.power.disconnect (powerID);
         if (install_event != 0) GLib.source_remove (install_event);
         if (core_event != 0) GLib.source_remove (core_event);
         if (freq_event != 0) GLib.source_remove (freq_event);
