@@ -3,6 +3,7 @@
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Lang = imports.lang;
+const UPowerGlib = imports.gi.UPowerGlib;
 
 const APPDIR = get_appdir ();
 imports.searchPath.unshift(APPDIR);
@@ -12,7 +13,7 @@ const Convenience = imports.convenience;
 const TITLE_KEY = 'title';
 const MONITOR_KEY = 'monitor';
 
-var DEBUGING = false;
+var DEBUGING = true;
 let settings = null;
 let monitor_timeout = 500;
 
@@ -59,6 +60,10 @@ var CpufreqService = new Lang.Class ({
             monitor_timeout = settings.get_int (MONITOR_KEY);
             this._add_event ();
         }));
+        this.up_client = new UPowerGlib.Client();
+        this.devices = this.up_client.get_devices();
+        this.devices.forEach (d=>{debug (d);});
+        print (this.devices.length);
     },
 
      _add_event: function () {
@@ -68,9 +73,10 @@ var CpufreqService = new Lang.Class ({
         }
         if (monitor_timeout > 0)
             event = GLib.timeout_add (100, monitor_timeout, Lang.bind (this, function () {
-            this._update_freq ();
-            return true;
-        }));
+                this._update_freq ();
+                return true;
+            }));
+        else this.quit ();
     },
 
     _init_streams: function() {

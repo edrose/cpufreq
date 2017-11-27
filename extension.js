@@ -262,7 +262,7 @@ const FrequencyIndicator = new Lang.Class({
                 this.title = this._settings.get_string (TITLE_KEY);
                 if (this.title) this.statusLabel.set_text (this.title);
             }));
-        } else GLib.spawn_command_line_async ("killall cpufreq-service");
+        }
     },
 
     _build_ui: function () {

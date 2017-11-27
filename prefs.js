@@ -161,7 +161,7 @@ var PowerProfile = new Lang.Class({
 
         this.add (new Gtk.Label ({label:"<b>"+text+"</b>",use_markup:true,xalign:0,margin_top:8}));
 
-        let hbox = new Gtk.Box ({orientation:Gtk.Orientation.HORIZONTAL, margin:6});
+        let hbox = new Gtk.Box ({orientation:Gtk.Orientation.HORIZONTAL});
         this.pack_start (hbox, false, false, 0);
         hbox.add (new Gtk.Label ({label: _("Power Profile")}));
         this.combo = new Gtk.ComboBoxText ();
