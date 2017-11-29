@@ -11,11 +11,17 @@ imports.searchPath.unshift(APPDIR);
 const Convenience = imports.convenience;
 
 const TITLE_KEY = 'title';
+const PROFILES_KEY = 'profiles';
 const MONITOR_KEY = 'monitor';
+const CHARGING_KEY = 'charging';
+const DISCHARGING_KEY = 'discharging';
 
 var DEBUGING = true;
 let settings = null;
+let profiles = [];
 let monitor_timeout = 500;
+let charging_profile = {percent:0, guid:""};
+let discharging_profile = {percent:100, guid:""};
 
 let streams = [];
 let freqs = [];
@@ -24,6 +30,7 @@ let cpucount = 1;
 
 let event = 0;
 let init_event = 0;
+let power_event = 0;
 
 var CpufreqService = new Lang.Class ({
     Name: 'CpufreqService',
@@ -37,12 +44,24 @@ var CpufreqService = new Lang.Class ({
         });
         GLib.set_application_name ("CPUFreq Service");
         monitor_timeout = settings.get_int (MONITOR_KEY);
+        let s = settings.get_string (CHARGING_KEY);
+        if (s) charging_profile = JSON.parse (s);
+        s = settings.get_string (DISCHARGING_KEY);
+        if (s) discharging_profile = JSON.parse (s);
+        s =  settings.get_string (PROFILES_KEY);
+        if (s) profiles = JSON.parse (s);
     },
 
     vfunc_startup: function() {
         this.parent();
         this.init ();
         this.hold ();
+    },
+
+    vfunc_activate: function() {
+        this.connect("destroy", () => {
+            this.remove_events ();
+        });
     },
 
     init: function() {
@@ -55,31 +74,53 @@ var CpufreqService = new Lang.Class ({
         cancel = new Gio.Cancellable ();
         this._init_streams ();
         this._update_freq ();
+        this.battery = null;
+        this.up_client = new UPowerGlib.Client();
+        this.devices = this.up_client.get_devices();
+        this.devices.forEach (d=>{
+            debug (d.kind_to_string (d.kind));
+            if (d.kind == UPowerGlib.DeviceKind.UPS) this.ups = d;
+            else if (d.kind == UPowerGlib.DeviceKind.BATTERY) this.battery = d;
+        });
+        if (this.ups && !this.battery) this.battery = this.ups;
         this._add_event ();
         settings.connect ("changed::" + MONITOR_KEY, Lang.bind (this, function() {
             monitor_timeout = settings.get_int (MONITOR_KEY);
             this._add_event ();
         }));
-        this.up_client = new UPowerGlib.Client();
-        this.devices = this.up_client.get_devices();
-        this.devices.forEach (d=>{debug (d);});
-        print (this.devices.length);
     },
 
-     _add_event: function () {
+    is_power_profile: function () {
+        return charging_profile.guid || discharging_profile.guid;
+    },
+
+    _add_event: function () {
         if (event != 0) {
             GLib.Source.remove (event);
             event = 0;
+        }
+        if (power_event != 0) {
+            GLib.Source.remove (power_event);
+            power_event = 0;
         }
         if (monitor_timeout > 0)
             event = GLib.timeout_add (100, monitor_timeout, Lang.bind (this, function () {
                 this._update_freq ();
                 return true;
             }));
+        else if (this.is_power_profile() && this.battery)
+            this.add_power_handler ();
         else this.quit ();
     },
 
-    _init_streams: function() {
+    add_power_handler: function () {
+        if (event != 0) {
+            GLib.Source.remove (event);
+            event = 0;
+        }
+    },
+
+    _init_streams: function () {
         debug ("init_streams");
         if (init_event != 0) {
             GLib.Source.remove (init_event);
@@ -150,7 +191,8 @@ var CpufreqService = new Lang.Class ({
     remove_events: function () {
         if (event != 0) GLib.Source.remove (event);
         if (init_event != 0) GLib.Source.remove (init_event);
-        event = 0; init_event = 0;
+        if (power_event != 0) GLib.Source.remove (power_event);
+        event = 0; init_event = 0; power_event = 0;
     }
 });
 
