@@ -1,9 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 
 # Because of weird bug in polkit, env is not passed normally.
 # So, when we need to execute our program with pkexec, we pass
 # PATH=... as our first argument.
-if [ $1 = PATH* ]
+if [[ $1 = PATH* ]]
 then
     export $1
     shift 1
@@ -13,10 +13,10 @@ args="$@"
 
 # Execute the same action with root priviledges.
 requires_root() {
-    if [ ! `whoami` = 'root' ]    # If we are not root,
+    if [[ ! `whoami` = 'root' ]]    # If we are not root,
     then
         echo "I'm not root."
-        PATH=$PATH pkexec $0 $args  # run this script with same args, but as root.
+        pkexec $(dirname "$(readlink -f "$0")")/cpufreqctl PATH=$PATH $args  # run this script with same args, but as root.
         exit                        # Required action has been done, unpriviledged copy is not needed.
     fi                              # If we are root, continue to do the action.
     echo "I'm ROOT!"
