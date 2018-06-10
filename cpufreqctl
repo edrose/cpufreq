@@ -5,21 +5,20 @@
 # PATH=... as our first argument.
 if [[ $1 = PATH* ]]
 then
-	export $1 
-	shift 1
+    export $1 
+    shift 1
 fi
 
 args="$@"
 
 # Execute the same action with root priviledges.
 requires_root() {
-        if [[ ! `whoami` = 'root' ]]		# If we are not root,
-        then
-                pkexec $0 PATH=$PATH $args	# run this script with same args, but as root.
-                exit						# Required action has been done, unpriviledged copy is not needed.
-        fi									# If we are root, continue to do the action.
+    if [[ ! `whoami` = 'root' ]]    # If we are not root,
+    then
+        pkexec $0 PATH=$PATH $args  # run this script with same args, but as root.
+        exit                        # Required action has been done, unpriviledged copy is not needed.
+    fi                              # If we are root, continue to do the action.
 }
-
 
 VERSION='17'
 cpucount=`cat /proc/cpuinfo|grep processor|wc -l`
