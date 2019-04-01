@@ -23,7 +23,7 @@
 
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
-const Lang = imports.lang;
+const GObject = import.gi.GObject;
 const System = imports.system;
 
 const APPDIR = get_appdir ();
@@ -91,11 +91,9 @@ const CpufreqServiceIface = '<node> \
 </node>';
 const CpufreqServiceInfo  = Gio.DBusInterfaceInfo.new_for_xml (CpufreqServiceIface);
 
-var CpufreqService = new Lang.Class ({
-    Name: 'CpufreqService',
-    Extends: Gio.Application,
+var CpufreqService = GObject.registerClass (class CpufreqService extends Gio.Application {
 
-    _init: function (args) {
+    _init(args) {
         GLib.set_prgname ("cpufreq-service");
         this.parent ({
             application_id: "org.konkor.cpufreq.service",
@@ -115,21 +113,21 @@ var CpufreqService = new Lang.Class ({
         color_show_custom_normal = settings.get_string (COLOR_SHOW_CUSTOM_NORMAL_KEY);
         color_show_custom_warning = settings.get_string (COLOR_SHOW_CUSTOM_WARNING_KEY);
         color_show_custom_critical = settings.get_string (COLOR_SHOW_CUSTOM_CRITICAL_KEY);
-    },
+    }
 
-    vfunc_startup: function() {
+    vfunc_startup() {
         this.parent();
         this.init ();
         this.hold ();
-    },
+    }
 
-    vfunc_activate: function() {
+    vfunc_activate() {
         this.connect("destroy", () => {
             this.remove_events ();
         });
-    },
+    }
 
-    init: function() {
+    init() {
         debug ("init");
         this.dbus = Gio.DBusExportedObject.wrapJSObject (CpufreqServiceInfo, this);
         this.dbus.export (Gio.DBus.session, OBJECT_PATH);
@@ -140,16 +138,16 @@ var CpufreqService = new Lang.Class ({
         this._init_streams ();
         this._update_freq ();
         this._add_event ();
-        settings.connect ("changed", Lang.bind (this, this.on_settings));
+        settings.connect ("changed", this.on_settings.bind(this));
         GLib.timeout_add (200, 8000, () => {
           let cores = GLib.get_num_processors ();
           if (cores != cpu_online) this._init_streams ();
           if (!frequency_show) this.gov0 = "";
           return true;
         });
-    },
+    }
 
-    on_settings: function (o, key) {
+    on_settings(o, key) {
       if (key == MONITOR_KEY) {
         monitor_timeout =  o.get_int (MONITOR_KEY);
         this._add_event ();
@@ -180,25 +178,25 @@ var CpufreqService = new Lang.Class ({
       style_state = -1;
 
       this.max0 = 0;
-    },
+    }
 
-     _add_event: function () {
+     _add_event() {
         if (event != 0) {
             GLib.Source.remove (event);
             event = 0;
         }
         if (monitor_timeout > 0)
-            event = GLib.timeout_add (100, monitor_timeout, Lang.bind (this, function () {
+            event = GLib.timeout_add (100, monitor_timeout, function () {
                 this._update_freq ();
                 return true;
-            }));
+            }.bind(this));
         else {
           this.dbus.emit_signal ("FrequencyChanged", new GLib.Variant("(s)", [""]));
           this.quit ();
         }
-    },
+    }
 
-    _init_streams: function() {
+    _init_streams() {
         debug ("init_streams");
         if (init_event != 0) {
             GLib.Source.remove (init_event);
@@ -221,9 +219,9 @@ var CpufreqService = new Lang.Class ({
                 streams.push (null);
             }
         }
-    },
+    }
 
-    _update_freq: function () {
+    _update_freq() {
         let m = 0, units, i = 0, g, l, s = 0;
         streams.forEach (stream => {
             if (stream) {
@@ -270,9 +268,9 @@ var CpufreqService = new Lang.Class ({
             gcc = 0;
             System.gc ();
         }
-    },
+    }
 
-    get_governors: function (core) {
+    get_governors(core) {
         core = core || 0;
         let path = '/sys/devices/system/cpu/cpu' + core + '/cpufreq/scaling_governor';
         let file = Gio.file_new_for_path (path);
@@ -286,7 +284,7 @@ var CpufreqService = new Lang.Class ({
                 governors.splice (governors.length - 1, 1);
             } catch (e) {}
         });
-    },
+    }
 
     get governor () {
         let g = governors[0];
@@ -302,9 +300,9 @@ var CpufreqService = new Lang.Class ({
         else if (g == "userspace") g = "\uf007";
         else g = "\uf0e7";
         return g;
-    },
+    }
 
-    get_loading: function () {
+    get_loading () {
         let file = Gio.file_new_for_path ('/proc/loadavg');
 
         file.load_contents_async (null, (o, res) => {
@@ -315,7 +313,7 @@ var CpufreqService = new Lang.Class ({
                 loading = Math.round (parseFloat (contents) * 100);
             } catch (e) {}
         });
-    },
+    }
 
     get loadavg () {
         let l;
@@ -327,7 +325,7 @@ var CpufreqService = new Lang.Class ({
           l = "☺";
         }
         return l;
-    },
+    }
 
     get stylestate () {
         let s;
@@ -344,9 +342,9 @@ var CpufreqService = new Lang.Class ({
           s = 0;
         }
         return s;
-    },
+    }
 
-    get_stylestring: function (state) {
+    get_stylestring(state) {
         let s;
         switch (state) {
           case 1:
@@ -371,20 +369,20 @@ var CpufreqService = new Lang.Class ({
             s = "";
         }
         return s;
-    },
+    }
 
-    _read_line: function (dis) {
+    _read_line (dis) {
         if (dis == null) return;
         try {
             dis.seek (0, GLib.SeekType.SET, null);
             dis.read_line_async (100, null, this._read_done);
         } catch (e) {
-            init_event = GLib.timeout_add (0, 25, Lang.bind (this, this._init_streams ));
+            init_event = GLib.timeout_add (0, 25, this._init_streams.bind(this));
             //error (e);
         }
-    },
+    }
 
-    _read_done: function (stream, res) {
+    _read_done(stream, res) {
         try {
             let [line,] = stream.read_line_finish (res);
             if (line) {
@@ -395,9 +393,9 @@ var CpufreqService = new Lang.Class ({
                 }
             }
         } catch (e) {}
-    },
+    }
 
-    remove_events: function () {
+    remove_events() {
         if (this.dbus) this.dbus.unexport ();
         if (event != 0) GLib.Source.remove (event);
         if (init_event != 0) GLib.Source.remove (init_event);

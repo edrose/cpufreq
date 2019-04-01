@@ -20,7 +20,6 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const Lang = imports.lang;
 const GObject = imports.gi.GObject;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
@@ -84,10 +83,9 @@ let eprofiles = [
 
 let settings = false;
 
-var CPUFreqPreferences = new Lang.Class({
-    Name: 'CPUFreqPreferences',
+var CPUFreqPreferences = GObject.registerClass(class CPUFreqPreferences {
 
-    _init: function () {
+    _init(){
         this.parent (0.0, "CPUFreq Preferences", false);
         let label, s;
 
@@ -133,11 +131,9 @@ var CPUFreqPreferences = new Lang.Class({
     }
 });
 
-var PageGeneralCPUFreq = new Lang.Class({
-    Name: 'PageGeneralCPUFreq',
-    Extends: Gtk.Box,
+var PageGeneralCPUFreq = GObject.registerClass(class PageGeneralCPUFreq extends Gtk.Box {
 
-    _init: function () {
+    _init() {
         this.parent ({orientation:Gtk.Orientation.VERTICAL, margin:6});
         let id = 0, i = 0, rb;
         this.border_width = 6;
@@ -148,10 +144,10 @@ var PageGeneralCPUFreq = new Lang.Class({
         this.cb_startup.margin = 6;
         this.add (this.cb_startup);
         this.cb_startup.active = save;
-        this.cb_startup.connect ('toggled', Lang.bind (this, ()=>{
+        this.cb_startup.connect ('toggled', (()=>{
             save = this.cb_startup.active;
             settings.set_boolean (SAVE_SETTINGS_KEY, save);
-        }));
+        }).bind(this));
         this.add (new Gtk.Label ({label: _("<b>Monitor</b>"), use_markup:true, xalign:0, margin_top:12}));
         let hbox = new Gtk.Box ({orientation:Gtk.Orientation.HORIZONTAL, margin:8});
         this.pack_start (hbox, false, false, 0);
@@ -159,10 +155,10 @@ var PageGeneralCPUFreq = new Lang.Class({
         this.timeout = Gtk.SpinButton.new_with_range (0, 1000000, 50);
         this.timeout.tooltip_text = _("500ms - default, 0 - disable");
         this.timeout.value = monitor_timeout;
-        this.timeout.connect ('value_changed', Lang.bind (this, ()=>{
+        this.timeout.connect ('value_changed', (()=>{
             monitor_timeout = this.timeout.value;
             settings.set_int (MONITOR_KEY, monitor_timeout);
-        }));
+        }).bind(this));
         hbox.pack_end (this.timeout, false, false, 0);
 
         hbox = new Gtk.Box ({orientation:Gtk.Orientation.HORIZONTAL, margin:6, margin_left:32});
@@ -174,48 +170,48 @@ var PageGeneralCPUFreq = new Lang.Class({
         cb_units.margin_left = 32;
         cb_units.active = frequency_show;
         hbox.pack_start (cb_units, true, true, 8);
-        cb_units.connect ('toggled', Lang.bind (this, (o)=>{
+        cb_units.connect ('toggled', ((o)=>{
             frequency_show = o.active;
             settings.set_boolean (FREQ_SHOW_KEY, frequency_show);
-        }));
+        }).bind(this));
 
         cb_units = Gtk.CheckButton.new_with_label (_("Governors"));
         cb_units.tooltip_text = _("Monitor governors");
         cb_units.active = governor_show;
         hbox.pack_start (cb_units, true, true, 8);
-        cb_units.connect ('toggled', Lang.bind (this, (o)=>{
+        cb_units.connect ('toggled', ((o)=>{
             governor_show = o.active;
             settings.set_boolean (GOVS_SHOW_KEY, governor_show);
-        }));
+        }).bind(this));
 
         cb_units = Gtk.CheckButton.new_with_label (_("Loading"));
         cb_units.tooltip_text = _("Monitor system loading");
         cb_units.active = load_show;
         hbox.pack_start (cb_units, true, true, 8);
-        cb_units.connect ('toggled', Lang.bind (this, (o)=>{
+        cb_units.connect ('toggled', ((o)=>{
             load_show = o.active;
             settings.set_boolean (LOAD_SHOW_KEY, load_show);
-        }));
+        }).bind(this));
 
         this.cb_units = Gtk.CheckButton.new_with_label (_("Show Measurement Units"));
         this.cb_units.tooltip_text = _("Show measurement units for frequencies");
         this.cb_units.margin = 6;
         this.add (this.cb_units);
         this.cb_units.active = units_show;
-        this.cb_units.connect ('toggled', Lang.bind (this, (o)=>{
+        this.cb_units.connect ('toggled', ((o)=>{
             units_show = o.active;
             settings.set_boolean (UNITS_SHOW_KEY, units_show);
-        }));
+        }).bind(this));
 
         this.cb_label = Gtk.CheckButton.new_with_label (_("Show Custom Label"));
         this.cb_label.tooltip_text = _("Always show the custom label");
         this.cb_label.margin = 6;
         this.add (this.cb_label);
         this.cb_label.active = label_show;
-        this.cb_label.connect ('toggled', Lang.bind (this, (o)=>{
+        this.cb_label.connect ('toggled', ((o)=>{
             label_show = o.active;
             settings.set_boolean (LABEL_SHOW_KEY, label_show);
-        }));
+        }).bind(this));
 
         hbox = new Gtk.Box ({orientation:Gtk.Orientation.HORIZONTAL, margin:8});
         this.pack_start (hbox, false, false, 0);
@@ -235,11 +231,11 @@ var PageGeneralCPUFreq = new Lang.Class({
         this.label.get_style_context().add_class ("cpufreq-text");
         this.label.tooltip_text = _("Label or just a symbol to show when monitor disabled");
         this.label.set_text (label_text);
-        this.label.connect ('changed', Lang.bind (this, (o)=>{
+        this.label.connect ('changed', ((o)=>{
             var s = o.text;
             //if (!s) s = "\u269b";
             settings.set_string (LABEL_KEY, s);
-        }));
+        }).bind(this));
 
         hbox.pack_end (this.label, false, false, 0);
 
@@ -250,28 +246,28 @@ var PageGeneralCPUFreq = new Lang.Class({
         //this.cb_color.margin = 6;
         this.cb_color.active = color_show;
         hbox.pack_start (this.cb_color, true, true, 0);
-        this.cb_color.connect ('toggled', Lang.bind (this, (o)=>{
+        this.cb_color.connect ('toggled', ((o)=>{
             color_show = o.active;
             settings.set_boolean (COLOR_SHOW_KEY, color_show);
             this.colorbox.sensitive = color_show && color_show_custom;
-        }));
+        }).bind(this));
         rb = Gtk.RadioButton.new_with_label_from_widget (null, _("Default colors"));
         rb.active = !settings.get_boolean (COLOR_SHOW_CUSTOM_KEY);
         rb.id = 0;
         hbox.pack_start(rb, true, true, 8);
-        rb.connect ('toggled', Lang.bind (this, (o)=>{
+        rb.connect ('toggled', ((o)=>{
             color_show_custom = !o.active;
             settings.set_boolean (COLOR_SHOW_CUSTOM_KEY, color_show_custom);
-        }));
+        }).bind(this));
         rb = Gtk.RadioButton.new_with_label_from_widget (rb, _("Custom colors"));
         rb.active = settings.get_boolean (COLOR_SHOW_CUSTOM_KEY);
         rb.id = 1;
         hbox.pack_start (rb, true, true, 8);
-        rb.connect ('toggled', Lang.bind (this, (o)=>{
+        rb.connect ('toggled', ((o)=>{
             color_show_custom = o.active;
             settings.set_boolean (COLOR_SHOW_CUSTOM_KEY, color_show_custom);
             this.colorbox.sensitive = color_show && color_show_custom;
-        }));
+        }).bind(this));
 
         this.colorbox = new Gtk.Box ({orientation:Gtk.Orientation.HORIZONTAL, margin:8});
         this.pack_start (this.colorbox, false, false, 0);
@@ -279,41 +275,41 @@ var PageGeneralCPUFreq = new Lang.Class({
         this.colorbox.add (new Gtk.Label ({label: _("Normal")}));
         let [ ,color] = Gdk.Color.parse (color_show_custom_normal);
         this.color_normal = Gtk.ColorButton.new_with_color (color);
-        this.color_normal.connect ('color-set', Lang.bind (this, (o)=>{
+        this.color_normal.connect ('color-set', ((o)=>{
             settings.set_string (COLOR_SHOW_CUSTOM_NORMAL_KEY, this.color_string (o.rgba));
-        }));
+        }).bind(this));
         this.colorbox.pack_start (this.color_normal, true, false, 0);
 
         this.colorbox.add (new Gtk.Label ({label: _("Warning")}));
         [ ,color] = Gdk.Color.parse (color_show_custom_warning);
         this.color_warning = Gtk.ColorButton.new_with_color (color);
-        this.color_warning.connect ('color-set', Lang.bind (this, (o)=>{
+        this.color_warning.connect ('color-set', ((o)=>{
             settings.set_string (COLOR_SHOW_CUSTOM_WARNING_KEY, this.color_string (o.rgba));
-        }));
+        }).bind(this));
         this.colorbox.pack_start (this.color_warning, true, false, 0);
 
         this.colorbox.add (new Gtk.Label ({label: _("Critical")}));
         [ ,color] = Gdk.Color.parse (color_show_custom_critical);
         this.color_critical = Gtk.ColorButton.new_with_color (color);
-        this.color_critical.connect ('color-set', Lang.bind (this, (o)=>{
+        this.color_critical.connect ('color-set', ((o)=>{
             settings.set_string (COLOR_SHOW_CUSTOM_CRITICAL_KEY, this.color_string (o.rgba));
-        }));
+        }).bind(this));
         this.colorbox.pack_start (this.color_critical, true, false, 0);
         this.colorbox.sensitive = color_show && color_show_custom;
 
         this.show_all ();
-    },
+    }
 
-    color_string: function (rgba) {
+    color_string(rgba) {
         let s = "#%02x%02x%02x".format (
             this.scale_round (rgba.red),
             this.scale_round (rgba.green),
             this.scale_round (rgba.blue)
         );
         return s;
-    },
+    }
 
-    scale_round: function (val) {
+    scale_round(val) {
         val = Math.floor (val * 255 + 0.5);
         val = Math.max (val, 0);
         val = Math.min (val, 255);
@@ -321,11 +317,9 @@ var PageGeneralCPUFreq = new Lang.Class({
     }
 });
 
-var PagePowerCPUFreq = new Lang.Class({
-    Name: 'PagePowerCPUFreq',
-    Extends: Gtk.Box,
+var PagePowerCPUFreq = GObject.registerClass(class PageGeneralCPUFreq extends Gtk.Box{
 
-    _init: function () {
+    _init () {
         this.parent ({orientation:Gtk.Orientation.VERTICAL, margin:6});
         this.border_width = 6;
 
@@ -339,36 +333,34 @@ var PagePowerCPUFreq = new Lang.Class({
           "when a conecting is temporary or you just want the battery to get some level before it."
         );
         this.add (this.plug);
-        this.unplug.combo.connect ('changed', Lang.bind (this, (o)=>{
+        this.unplug.combo.connect ('changed', ((o)=>{
             if (o.active == 0) eprofiles[EventType.DISCHARGING].guid = "";
             else eprofiles[EventType.DISCHARGING].guid = profiles[o.active - 1].guid;
             this.unplug.slider.set_value (100);
             settings.set_string (EPROFILES_KEY, JSON.stringify (eprofiles));
-        }));
-        this.unplug.slider.connect('value_changed', Lang.bind (this, function (o) {
+        }).bind(this));
+        this.unplug.slider.connect('value_changed', function (o) {
             eprofiles[EventType.DISCHARGING].percent = Math.round (o.get_value ());
             settings.set_string (EPROFILES_KEY, JSON.stringify (eprofiles));
-        }));
-        this.plug.combo.connect ('changed', Lang.bind (this, (o)=>{
+        }.bind(this));
+        this.plug.combo.connect ('changed', ((o)=>{
             if (o.active == 0) eprofiles[EventType.CHARGING].guid = "";
             else eprofiles[EventType.CHARGING].guid = profiles[o.active - 1].guid;
             this.plug.slider.set_value (0);
             settings.set_string (EPROFILES_KEY, JSON.stringify (eprofiles));
-        }));
-        this.plug.slider.connect('value_changed', Lang.bind (this, function (o) {
+        }).bind(this));
+        this.plug.slider.connect('value_changed', function (o) {
             eprofiles[EventType.CHARGING].percent = Math.round (o.get_value ());
             settings.set_string (EPROFILES_KEY, JSON.stringify (eprofiles));
-        }));
+        }.bind(this));
 
         this.show_all ();
     }
 });
 
-var PowerProfile = new Lang.Class({
-    Name: 'PowerProfile',
-    Extends: Gtk.Box,
+var PowerProfile = GObject.registerClass(class PowerProfile extends Gtk.Box{
 
-    _init: function (profile, text, tooltip) {
+    _init (profile, text, tooltip) {
         this.parent ({orientation:Gtk.Orientation.VERTICAL, margin:6});
         this.tooltip_text = tooltip;
         this.border_width = 6;
@@ -399,14 +391,14 @@ var PowerProfile = new Lang.Class({
         this.slider.draw_value = false;
         this.slider.set_value (profile.percent);
         this.add (this.slider);
-        this.slider.connect('value_changed', Lang.bind (this, function (o) {
+        this.slider.connect('value_changed', function (o) {
             this.update_info (Math.round (o.get_value ()).toString ());
-        }));
+        }.bind(this));
 
         this.show_all ();
-    },
+    }
 
-    update_info: function (info) {
+    update_info (info) {
         this.info.set_markup ("<i>" + info + "%</i>");
     }
 });
